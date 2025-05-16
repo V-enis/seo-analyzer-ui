@@ -1,49 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Local SEO Analyzer</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SEO Analyzer UI</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7f8;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+
+    form {
+      background: #fff;
+      padding: 20px 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+      color: #555;
+    }
+
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #005ea1;
+    }
+
+    #success-message {
+      display: none;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      padding: 12px 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    #seo-report {
+      display: none;
+      margin-top: 10px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      background-color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      border-radius: 8px;
+      white-space: pre-wrap; /* preserve line breaks */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
-  <h1>Local SEO Analyzer</h1>
-  <form id="seoForm">
-    <label for="name">Business Name:</label><br>
-    <input type="text" id="name" name="name" required><br>
 
-    <label for="location">Location:</label><br>
-    <input type="text" id="location" name="location" required><br>
+  <h1>SEO Analyzer</h1>
 
-    <label for="email">Email (optional):</label><br>
-    <input type="email" id="email" name="email"><br><br>
+  <form id="seo-form">
+    <label for="businessName">Business Name *</label>
+    <input type="text" id="businessName" name="businessName" required />
 
-    <button type="submit">Get SEO Report</button>
+    <label for="location">Location *</label>
+    <input type="text" id="location" name="location" required />
+
+    <label for="email">Email (optional)</label>
+    <input type="email" id="email" name="email" placeholder="your@email.com" />
+
+    <button type="submit">Analyze SEO</button>
   </form>
 
-  <pre id="response"></pre>
+  <div id="success-message">Your request was sent successfully!</div>
+
+  <div id="seo-report"></div>
 
   <script>
-    const form = document.getElementById("seoForm");
-    const responseEl = document.getElementById("response");
+    const form = document.getElementById('seo-form');
+    const successMessage = document.getElementById('success-message');
+    const seoReport = document.getElementById('seo-report');
 
-    form.addEventListener("submit", async (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Hide messages
+      successMessage.style.display = 'none';
+      seoReport.style.display = 'none';
+      seoReport.textContent = '';
+
+      const businessName = form.businessName.value.trim();
+      const location = form.location.value.trim();
+      const email = form.email.value.trim();
+
+      if (!businessName || !location) {
+        alert("Please fill in required fields.");
+        return;
+      }
+
+      // Prepare the data payload expected by your n8n workflow
       const data = {
-        name: form.name.value,
-        location: form.location.value,
-        email: form.email.value
+        businessName,
+        location,
       };
+      if (email) data.email = email;
 
-      const res = await fetch("http://localhost:5678/webhook-test/seo-analyzer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-      });
+      try {
+        const response = await fetch('http://localhost:5678/webhook-test/seo-analyzer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
 
-      const result = await res.json();
-      responseEl.textContent = JSON.stringify(result, null, 2);
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        successMessage.style.display = 'block';
+
+        // If no email provided, show the SEO report nicely formatted
+        if (!email) {
+          let reportText = '';
+
+          // Assuming your workflow returns a field like 'markdown_report' or just 'report'
+          if (result.markdown_report) {
+            reportText = result.markdown_report;
+          } else if (result.report) {
+            reportText = result.report;
+          } else if (typeof result === 'string') {
+            reportText = result;
+          } else {
+            // fallback stringify
+            reportText = JSON.stringify(result, null, 2);
+          }
+
+          seoReport.textContent = reportText;
+          seoReport.style.display = 'block';
+        }
+
+        // Clear form
+        form.reset();
+
+      } catch (err) {
+        alert('Error sending request: ' + err.message);
+      }
     });
   </script>
+
 </body>
 </html>
