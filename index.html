@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Local SEO Analyzer</title>
+</head>
+<body>
+  <h1>Local SEO Analyzer</h1>
+  <form id="seoForm">
+    <label for="name">Business Name:</label><br>
+    <input type="text" id="name" name="name" required><br>
+
+    <label for="location">Location:</label><br>
+    <input type="text" id="location" name="location" required><br>
+
+    <label for="email">Email (optional):</label><br>
+    <input type="email" id="email" name="email"><br><br>
+
+    <button type="submit">Get SEO Report</button>
+  </form>
+
+  <pre id="response"></pre>
+
+  <script>
+    const form = document.getElementById("seoForm");
+    const responseEl = document.getElementById("response");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        name: form.name.value,
+        location: form.location.value,
+        email: form.email.value
+      };
+
+      const res = await fetch("http://localhost:5678/webhook-test/seo-analyzer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      responseEl.textContent = JSON.stringify(result, null, 2);
+    });
+  </script>
+</body>
+</html>
